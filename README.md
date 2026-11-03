@@ -1,83 +1,111 @@
-# Asistente de atención al cliente con IA — backend
+# Comanda — pedidos online para locales de comida
 
-Backend en Python (FastAPI) para un asistente de atención al cliente con IA pensado para pequeños negocios. Un negocio se conecta a esto (WhatsApp o web) y responde consultas de sus clientes usando el contexto propio de ese negocio, sin que el dueño toque código. Diseñado desde el principio con mentalidad multi-tenant: múltiples negocios y usuarios conviven en la misma base, separados solo por datos.
+*Comanda es un nombre provisorio.*
 
-## Stack
+Plataforma para que locales gastronómicos publiquen su menú, reciban pedidos online y los gestionen desde un panel. Es multi-tenant: muchos dueños conviven en la misma base y cada uno ve solo sus propios datos.
 
-Python 3.13 (evitar 3.14 por un bug de compatibilidad conocido con SQLAlchemy — ver línea de tiempo).
+- El **dueño** se registra, crea sus sucursales y sus menús, y atiende los pedidos que llegan.
+- El **cliente final** abre el enlace público de una sucursal desde el celular, elige platos y hace el pedido sin crear una cuenta.
 
-## Instalación
+El proyecto empezó como la base de un asistente de atención al cliente con IA para pequeños negocios. **Esa integración no está implementada**: hoy el sistema es la plataforma de menús y pedidos sobre la que se construiría.
 
-El repositorio tiene el backend en `backend/`; el frontend (React) está pendiente y va a vivir en `frontend/`. El entorno virtual `venv/` se crea en la raíz del repo; **el servidor y los tests se ejecutan siempre desde `backend/`**.
+## Qué funciona hoy
 
-Crear y activar el entorno virtual (desde la raíz del repo):
+**Backend** (Python + FastAPI + SQLite, en `backend/`)
+
+- Registro e inicio de sesión con JWT; emails validados y normalizados, reglas de contraseña.
+- Sucursales con enlace público propio (`slug`), plazo de retiro configurable y archivado sin perder pedidos.
+- Menús y platos (con categorías, precios exactos y platos agotados), compartibles entre sucursales.
+- Pedidos públicos validados de punta a punta (el total lo calcula siempre el servidor), numerados por sucursal y sin choques aunque lleguen a la vez.
+- Máquina de estados de pedidos (pendiente → confirmado → en preparación → listo → entregado, o cancelado) y cancelación automática de los pedidos listos que no se retiran a tiempo.
+- Aislamiento total entre dueños: un recurso ajeno responde 404, como si no existiera.
+
+**Panel del dueño** (React, en `frontend/`)
+
+- Cuenta: registro con las reglas de contraseña a la vista, inicio y cierre de sesión, aviso cuando la sesión vence.
+- Sucursales: crear, editar, asignar o quitar el menú, copiar el enlace público y archivar con confirmación.
+- Menús: crear, borrar (con el motivo si una sucursal activa lo usa) y un editor de platos agrupados por categoría.
+- Pedidos: selector de sucursal, pestañas Activos e Historial (paginado), filtro por estado y un botón por tarjeta con la acción siguiente. Los activos se actualizan solos cada 15 segundos.
+
+**Página pública del cliente** (`/pedir/<slug>`, pensada para celular)
+
+- Menú por categorías (los platos agotados no se muestran), carrito con límites (cantidades, cantidad de platos y total máximo), resumen con nombre, teléfono y notas, y el número de pedido final en grande.
+- Si el enlace no existe, la sucursal está archivada o no tiene menú, muestra una sola pantalla: «Este local no está disponible».
+
+## Requisitos
+
+- Python **3.13** (evitar 3.14 por un problema de compatibilidad con SQLAlchemy).
+- Node.js **20** o superior y npm.
+
+## Cómo levantarlo
+
+**1. Backend** (desde la raíz del repo):
 
 ```bash
 python -m venv venv
-source venv/Scripts/activate
-```
-
-En Windows con PowerShell, en lugar del segundo comando:
-
-```bash
-venv\Scripts\Activate.ps1
-```
-
-Entrar al backend e instalar las dependencias (las versiones están fijadas en `requirements.txt`; `requirements-dev.txt` agrega `pytest`):
-
-```bash
+source venv/Scripts/activate        # en PowerShell: venv\Scripts\Activate.ps1
 cd backend
 pip install -r requirements-dev.txt
+cp .env.example .env                # y completá SECRET_KEY (ver abajo)
+fastapi dev main.py                 # http://localhost:8000 (documentación en /docs)
 ```
 
-Para producción alcanza con `pip install -r requirements.txt`.
+Para generar la `SECRET_KEY`: `python -c "import secrets; print(secrets.token_hex(32))"`. Sin ella el servidor no arranca, a propósito.
 
-Configurar las variables de entorno (dentro de `backend/`): copiar `.env.example` a `.env` y completar `SECRET_KEY` con una clave generada así:
+**2. Frontend** (en otra terminal):
 
 ```bash
-cp .env.example .env
-python -c "import secrets; print(secrets.token_hex(32))"
+cd frontend
+npm install
+npm run dev                         # http://localhost:5173
 ```
 
-El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el servidor no arranca, a propósito. Opcionalmente, `DATABASE_URL` cambia la base; por defecto es `backend/businesses.db`, ubicada a partir de `database.py` (no depende de la carpeta desde donde se lance el servidor). Una variable ya definida en el entorno tiene prioridad sobre el `.env`.
-
-**CORS** (para el frontend): `CORS_ORIGINS` es una lista de orígenes permitidos separados por comas, por ejemplo `CORS_ORIGINS=http://localhost:5173,https://panel.example.com`. Si falta o está vacía se usa `http://localhost:5173` (el servidor de desarrollo de Vite). Nunca se acepta `*`: cada origen se lista explícitamente. El token viaja en el header `Authorization` (sin cookies).
-
-### Para qué se usa cada librería
-
-- **fastapi[standard]**: framework web — endpoints, validación, servidor de desarrollo.
-- **pydantic** (viene con FastAPI): validación de datos que viajan por HTTP (`schemas/`).
-- **sqlalchemy**: ORM — modelos de tabla (`models/`) y queries contra SQLite.
-- **passlib[bcrypt]**: hashing de contraseñas.
-- **bcrypt<5.0.0**: versión fijada — `passlib` es incompatible con `bcrypt>=5.0.0`.
-- **python-jose[cryptography]**: generación y verificación de JWT.
-- **python-dotenv**: carga las variables del archivo `.env` (por ejemplo `SECRET_KEY`).
-- **email-validator**: valida los emails (`EmailStr`); viene con `fastapi[standard]` y además está fijado en `requirements.txt`.
-- **pytest** (solo desarrollo): la suite de tests.
-
-## Levantar el servidor
-
-Desde `backend/`, con el entorno virtual activado:
-
-```bash
-cd backend
-fastapi dev main.py
-```
-
-Documentación interactiva: `http://127.0.0.1:8000/docs`
+El backend acepta por defecto pedidos del navegador desde `http://localhost:5173`, así que con los valores por defecto ya funcionan juntos. El servidor y los tests del backend se ejecutan siempre desde `backend/`.
 
 ## Tests
 
-Desde `backend/`, con las dependencias de desarrollo instaladas:
+**Backend** (desde `backend/`, con el entorno virtual activado):
 
 ```bash
-cd backend
-pytest
+pytest                    # toda la suite
+pytest -m "not slow"      # sin las pruebas de concurrencia con hilos reales
 ```
 
-Saltear las pruebas lentas (concurrencia con hilos reales): `pytest -m "not slow"`.
+Cada prueba usa su propia base SQLite temporal y una clave de prueba: nunca toca la base real ni el `.env`.
 
-Los tests no usan el `.env` ni el `businesses.db` reales: cada prueba trabaja sobre su propia copia de una base SQLite temporal y usa una `SECRET_KEY` de prueba. Todos los datos de prueba son ficticios. La suite cubre autenticación, negocios, slugs, archivado, menús, menú público, creación de pedidos, estados, cancelación automática, concurrencia y fechas (`backend/tests/test_<tema>.py`; las fixtures compartidas están en `backend/tests/conftest.py`).
+**Frontend** (desde `frontend/`):
+
+```bash
+npm test                  # tests unitarios y de componentes (Vitest + Testing Library)
+npm run typecheck         # TypeScript estricto
+npm run lint              # ESLint
+npm run build             # versión de producción en dist/
+```
+
+**De punta a punta** (desde `frontend/`): recorre registro, inicio de sesión, sucursal, menú, pedido del cliente y su avance hasta entregado, con un navegador real.
+
+```bash
+npx playwright install chromium   # solo la primera vez: descarga el navegador
+npm run e2e
+```
+
+Necesita el entorno virtual del backend creado en la raíz (`venv/`) con sus dependencias instaladas. Levanta solo el backend (puerto 8011) y el frontend (puerto 5174) con una base temporal en `frontend/.e2e-tmp/`, que se borra al terminar.
+
+## Configuración
+
+| Variable | Dónde | Para qué |
+|---|---|---|
+| `SECRET_KEY` | `backend/.env` | Firma de los tokens. Obligatoria. |
+| `DATABASE_URL` | `backend/.env` | Opcional. Por defecto `backend/businesses.db`, ubicada a partir de `database.py`. |
+| `CORS_ORIGINS` | `backend/.env` | Opcional. Orígenes del navegador permitidos, separados por comas. Por defecto `http://localhost:5173`. Nunca acepta `*`. |
+| `VITE_API_URL` | `frontend/.env` | Opcional. Dirección del backend. Por defecto `http://localhost:8000`. |
+
+Los `.env` no se suben al repositorio (las plantillas son los `.env.example`). Una variable ya definida en el entorno tiene prioridad sobre el `.env`. Todo lo que empieza con `VITE_` termina en el código que se manda al navegador: nunca pongas secretos ahí.
+
+## Stack
+
+- **Backend:** FastAPI, Pydantic, SQLAlchemy (SQLite), passlib + bcrypt (contraseñas; `bcrypt<5.0.0` fijado por incompatibilidad), python-jose (JWT), python-dotenv, email-validator y pytest. Versiones fijadas en `backend/requirements.txt` y `backend/requirements-dev.txt`.
+- **Frontend:** React 19, Vite, TypeScript estricto, Tailwind CSS 4, React Router, TanStack Query, React Hook Form + Zod, Lucide (iconos), Motion (animaciones puntuales), fuentes autoalojadas, Vitest + Testing Library y Playwright. Los tipos de la API se generan desde el backend con `npm run gen:api`.
 
 ## Estructura del proyecto
 
@@ -86,7 +114,7 @@ asistente-ia/
 ├── README.md
 ├── .gitignore
 ├── venv/                      # entorno virtual (no se sube)
-├── frontend/                  # PENDIENTE: panel web en React (todavía no existe)
+├── frontend/                  # panel del dueño y página pública del cliente (React + Vite)
 └── backend/                   # todo el backend; servidor y tests se ejecutan desde acá
     ├── main.py                # punto de entrada — crea la app y engancha los routers
     ├── database.py            # conexión a SQLite, engine, sesión, get_db()
@@ -125,6 +153,24 @@ asistente-ia/
     └── tests/                 # suite de pytest (conftest.py + test_<tema>.py)
 ```
 
+
+Dentro de `frontend/`:
+
+```
+frontend/
+├── src/
+│   ├── api/          # cliente HTTP, sesión (token), errores y tipos generados de la API
+│   ├── app/          # rutas, layouts (AppShell, PublicLayout), guardias de sesión, proveedores
+│   ├── components/   # Button, TextField, StatusBadge, OrderCard, MenuItemRow, CartBar, ...
+│   ├── features/     # pantallas por área: auth, businesses, menus, orders, public
+│   ├── lib/          # dinero en centavos, fechas, validaciones, límites, estados de pedidos
+│   ├── styles/       # tokens.css (única fuente de colores, tipografía, espaciado) y base.css
+│   └── config.ts     # APP_NAME (nombre provisorio) y API_URL
+├── tests/            # Vitest + Testing Library
+├── e2e/              # recorrido de punta a punta con Playwright
+└── .env.example      # VITE_API_URL
+```
+
 ## Endpoints
 
 Documentación interactiva completa en `/docs`. Resumen:
@@ -148,7 +194,7 @@ Documentación interactiva completa en `/docs`. Resumen:
 
 **Públicos (sin JWT, para el cliente final)**
 
-- `GET /public/{slug}/menu`: el menú de la sucursal, solo con los platos disponibles.
+- `GET /public/{slug}/menu`: el menú de la sucursal, solo con los platos disponibles (los agotados no se muestran).
 - `POST /public/{slug}/orders`: crea un pedido. El total lo calcula siempre el servidor con los precios actuales; cada pedido guarda una copia del nombre y el precio de cada plato. El teléfono lleva entre 6 y 15 dígitos (puede tener `+` al comienzo, espacios y guiones, pero no dos espacios ni dos guiones seguidos).
 
 ## Reglas de negocio destacadas
@@ -165,7 +211,7 @@ Documentación interactiva completa en `/docs`. Resumen:
 
 Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`. Cada usuario ve y administra únicamente sus propios negocios, menús, platos y pedidos: un recurso ajeno responde 404, como si no existiera.
 
-## Línea de tiempo del desarrollo
+## Historia del desarrollo
 
 1. **FastAPI desde cero**: primer endpoint, path parameters, query parameters, decoradores, Pydantic, documentación automática (`/docs`).
 2. **CRUD completo de `/businesses/`**: create, list, get individual, update parcial (PATCH), delete. IDs generados por el servidor, nunca reutilizados. Persistencia en memoria (diccionario) como primer paso, con separación de modelo de entrada/salida (`BusinessCreate` / `Business`).
@@ -181,6 +227,7 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 12. **Suite de tests con pytest**: más de 300 pruebas versionadas, cada una con su propia base temporal (nunca la real), que cubren todo lo anterior, incluidas carreras con hilos reales. Al armarla se agregaron validaciones de largo en negocios, menús y platos, el plazo de retiro al crear, límites de dígitos en el teléfono y dependencias fijadas en `requirements.txt`.
 13. **Un solo repositorio para backend y frontend**: el backend se mudó a `backend/` (con `git mv`, conservando el historial) para preparar el frontend, y la ruta por defecto de la base pasó a armarse a partir de `database.py`, para no crear bases vacías según la carpeta desde donde se lance el servidor.
 14. **Backend listo para el frontend**: CORS configurable con `CORS_ORIGINS`, emails validados y normalizados a minúsculas, reglas de contraseña al registrarse, listado y borrado de menús (protegido si una sucursal activa lo usa) y un endpoint para quitarle el menú a una sucursal.
+15. **Frontend**: panel del dueño y página pública del cliente en React, con un sistema de diseño basado en tokens, tipos generados desde la API, dinero en centavos enteros, tests unitarios y de componentes y un smoke de punta a punta con Playwright (que encontró y ayudó a corregir tres carreras entre redirecciones).
 
 ### Bugs reales resueltos en el camino
 
@@ -193,14 +240,14 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 - Numerar pedidos con `MAX + 1` fallaba con pedidos simultáneos (dos podían calcular el mismo número; los reintentos solo lo hacían menos probable) → resuelto con un contador por sucursal incrementado en un único `UPDATE ... RETURNING`.
 - SQLite descarta la zona horaria al guardar fechas: una hora en UTC-3 quedaba guardada como si fuera UTC → resuelto con un tipo de columna propio que convierte a UTC antes de guardar.
 
-## Próximos pasos
+## Estado y próximos pasos
 
-- Rate limiting en el endpoint público de pedidos (antes de publicar).
-- Gestión de negocios archivados: ver, restaurar y, eventualmente, eliminar con un plazo de retención.
-- Hacer cumplir las foreign keys en SQLite (`PRAGMA foreign_keys`).
-- Migraciones con Alembic.
-- Migración a PostgreSQL.
-- Tabla de preguntas frecuentes ligada a `Business`.
-- Integración con un asistente de IA (en pausa).
-- Frontend web (React) para el panel de administración de los dueños de negocio.
-- Conexión con WhatsApp como interfaz del cliente final.
+Lo que todavía **no** está hecho, para que nadie se lleve una sorpresa:
+
+- **Integración con IA:** no implementada. Era la idea original del proyecto y está en pausa.
+- **Rate limiting del endpoint público de pedidos:** falta. Hoy cualquiera puede generar pedidos sin límite; es lo primero a resolver antes de publicar.
+- **Token de sesión en `localStorage`:** funciona, pero un ataque XSS podría leerlo. Una alternativa más segura sería una cookie `HttpOnly`. El token dura 60 minutos y no se renueva solo.
+- **Tema oscuro:** los colores ya están definidos, pero no hay un interruptor para activarlo.
+- **Logo y nombre definitivos:** «Comanda» es provisorio y no hay logo.
+- **Base de datos:** SQLite sin migraciones. Falta Alembic y la migración a PostgreSQL (con foreign keys reales).
+- Otros pendientes: gestión de sucursales archivadas (ver, restaurar, eliminar con plazo de retención), tabla de preguntas frecuentes y WhatsApp como canal del cliente final.
