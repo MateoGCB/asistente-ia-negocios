@@ -24,6 +24,10 @@ export const routes: RouteObject[] = [
     element: <RequireAuth><AppShell /></RequireAuth>,
     children: [
       { index: true, element: <Navigate to={HOME_PATH} replace /> },
+      { path: "/negocios", lazy: page(() => import("../features/businesses/BusinessesPage").then((m) => ({ default: m.BusinessesPage }))) },
+      { path: "/negocios/:id", lazy: page(() => import("../features/businesses/BusinessDetailPage").then((m) => ({ default: m.BusinessDetailPage }))) },
+      { path: "/menus", lazy: page(() => import("../features/menus/MenusPage").then((m) => ({ default: m.MenusPage }))) },
+      { path: "/menus/:id", lazy: page(() => import("../features/menus/MenuEditorPage").then((m) => ({ default: m.MenuEditorPage }))) },
     ],
   },
   { path: "/salir", element: <Logout /> },
