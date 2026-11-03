@@ -295,7 +295,7 @@ def test_forced_number_collision_returns_409_and_reverts_the_counter(shop, place
     assert counter(db_session, business_id) == 1  # the rollback also undid the increment
     assert saved_rows(db_session) == (1, 0)       # only the hand-made order, no half-saved one
 
-    # The manual fix documented in CLAUDE.md puts the counter after the highest number
+    # Manual fix for a stale counter: next_order_number = MAX(number) + 1 for the branch
     db_session.execute(text(
         "UPDATE business SET next_order_number = "
         "(SELECT COALESCE(MAX(number), 0) + 1 FROM orders WHERE orders.business_id = business.id) "

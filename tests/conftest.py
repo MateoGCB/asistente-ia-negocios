@@ -251,7 +251,8 @@ def place_order(client):
 def insert_order(db_session):
     """Inserts an order DIRECTLY in the test DB (skipping the API), e.g. to prepare a state by hand.
     It also moves the branch counter, like create_order does: an order inserted by hand without
-    moving it would make every later order of that branch fail with 409 (see CLAUDE.md)."""
+    moving it would make every later order of that branch fail with 409 (manual fix: set the
+    branch's next_order_number = MAX(number) + 1)."""
     def _insert_order(business_id: int, menu_item_id: int, quantity: int = 1, **order_fields) -> Order_db:
         db_session.expire_all()  # the API may have moved the counter since this session last read it
         business = db_session.get(Business_db, business_id)
