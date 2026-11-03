@@ -13,6 +13,7 @@ import os
 
 os.environ["SECRET_KEY"] = "test-secret-key-not-used-anywhere-else"
 os.environ["DATABASE_URL"] = "sqlite://"  # in-memory, only used by main.py's import-time create_all
+os.environ["CORS_ORIGINS"] = ""  # empty -> the default origin, whatever the developer's .env says
 
 import copy
 import hashlib
