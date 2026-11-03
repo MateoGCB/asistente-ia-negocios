@@ -41,6 +41,8 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el servidor no arranca, a propósito. Opcionalmente, `DATABASE_URL` cambia la base; por defecto es `backend/businesses.db`, ubicada a partir de `database.py` (no depende de la carpeta desde donde se lance el servidor). Una variable ya definida en el entorno tiene prioridad sobre el `.env`.
 
+**CORS** (para el frontend): `CORS_ORIGINS` es una lista de orígenes permitidos separados por comas, por ejemplo `CORS_ORIGINS=http://localhost:5173,https://panel.example.com`. Si falta o está vacía se usa `http://localhost:5173` (el servidor de desarrollo de Vite). Nunca se acepta `*`: cada origen se lista explícitamente. El token viaja en el header `Authorization` (sin cookies).
+
 ### Para qué se usa cada librería
 
 - **fastapi[standard]**: framework web — endpoints, validación, servidor de desarrollo.
@@ -50,6 +52,7 @@ El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el
 - **bcrypt<5.0.0**: versión fijada — `passlib` es incompatible con `bcrypt>=5.0.0`.
 - **python-jose[cryptography]**: generación y verificación de JWT.
 - **python-dotenv**: carga las variables del archivo `.env` (por ejemplo `SECRET_KEY`).
+- **email-validator**: valida los emails (`EmailStr`); viene con `fastapi[standard]` y además está fijado en `requirements.txt`.
 - **pytest** (solo desarrollo): la suite de tests.
 
 ## Levantar el servidor
@@ -129,11 +132,13 @@ Documentación interactiva completa en `/docs`. Resumen:
 **Autenticación**
 
 - `POST /auth/register` · `POST /auth/login` (devuelve un JWT).
+- El email se valida y se guarda en minúsculas; el login no distingue mayúsculas. El nombre va de 1 a 100 caracteres, sin espacios en los extremos.
+- Contraseña (solo al registrarse): mínimo 8 caracteres, máximo 72 **bytes** en UTF-8 (límite de bcrypt: una letra con tilde ocupa 2 bytes) y al menos una letra y un número. Si no cumple, 422. El login nunca aplica estas reglas: una contraseña incorrecta siempre da el mismo 401.
 
 **Del dueño (requieren JWT; un recurso ajeno responde 404, como si no existiera)**
 
-- Negocios (cada negocio es una sucursal): `POST /businesses/`, `GET /businesses/`, `GET|PATCH|DELETE /businesses/{business_id}`. Cada sucursal tiene un `slug` público, generado automáticamente y no editable, y un plazo de retiro configurable al crearla o editarla (`pickup_timeout_hours`, de 1 a 72 horas, por defecto 24). `name` va de 1 a 100 caracteres e `industry` de 1 a 60.
-- Menús y platos: `POST /menus/`, `POST|GET /menus/{menu_id}/items`, `PATCH|DELETE /menus/{menu_id}/items/{item_id}`. El nombre del menú y el del plato van de 1 a 100 caracteres y la descripción del plato de 1 a 500. Un plato se puede marcar como agotado (`available: false`); un plato que ya figura en pedidos no se puede borrar.
+- Negocios (cada negocio es una sucursal): `POST /businesses/`, `GET /businesses/`, `GET|PATCH|DELETE /businesses/{business_id}`, `DELETE /businesses/{business_id}/menu` (le quita el menú a la sucursal sin borrar el menú; repetirlo también da 200). Cada sucursal tiene un `slug` público, generado automáticamente y no editable, y un plazo de retiro configurable al crearla o editarla (`pickup_timeout_hours`, de 1 a 72 horas, por defecto 24). `name` va de 1 a 100 caracteres e `industry` de 1 a 60.
+- Menús y platos: `POST|GET /menus/` (el listado trae `id`, `name` e `items_count`), `DELETE /menus/{menu_id}`, `POST|GET /menus/{menu_id}/items`, `PATCH|DELETE /menus/{menu_id}/items/{item_id}`. El nombre del menú y el del plato van de 1 a 100 caracteres y la descripción del plato de 1 a 500. Un plato se puede marcar como agotado (`available: false`); un plato que ya figura en pedidos no se puede borrar. Un menú usado por alguna sucursal activa no se puede borrar (409: primero hay que quitárselo); si solo lo usan sucursales archivadas, se borra junto con sus platos y esas sucursales quedan sin menú. Los pedidos viejos no cambian, porque guardan su copia del nombre y el precio.
 - Pedidos de una sucursal:
   - `GET /businesses/{business_id}/orders?view=active` (por defecto): pedidos en curso, del más viejo al más nuevo.
   - `GET /businesses/{business_id}/orders?view=history`: entregados y cancelados, del más nuevo al más viejo, paginado (`page`, `page_size` hasta 50).
@@ -175,6 +180,7 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 11. **Robustez y cierre**: contador atómico de números de pedido (probado con pedidos simultáneos reales), cambios de estado atómicos con `UPDATE` condicional, un tipo de columna propio para que todas las fechas queden en UTC, y archivado de negocios (borrado lógico) con slugs que nunca se reutilizan.
 12. **Suite de tests con pytest**: más de 300 pruebas versionadas, cada una con su propia base temporal (nunca la real), que cubren todo lo anterior, incluidas carreras con hilos reales. Al armarla se agregaron validaciones de largo en negocios, menús y platos, el plazo de retiro al crear, límites de dígitos en el teléfono y dependencias fijadas en `requirements.txt`.
 13. **Un solo repositorio para backend y frontend**: el backend se mudó a `backend/` (con `git mv`, conservando el historial) para preparar el frontend, y la ruta por defecto de la base pasó a armarse a partir de `database.py`, para no crear bases vacías según la carpeta desde donde se lance el servidor.
+14. **Backend listo para el frontend**: CORS configurable con `CORS_ORIGINS`, emails validados y normalizados a minúsculas, reglas de contraseña al registrarse, listado y borrado de menús (protegido si una sucursal activa lo usa) y un endpoint para quitarle el menú a una sucursal.
 
 ### Bugs reales resueltos en el camino
 
@@ -191,8 +197,6 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 
 - Rate limiting en el endpoint público de pedidos (antes de publicar).
 - Gestión de negocios archivados: ver, restaurar y, eventualmente, eliminar con un plazo de retención.
-- Completar el CRUD de menús: listar y borrar menús (decidiendo qué pasa con sus ítems y con los negocios que lo usan) y poder quitarle el menú a un negocio.
-- Validación de emails y contraseñas al registrarse.
 - Hacer cumplir las foreign keys en SQLite (`PRAGMA foreign_keys`).
 - Migraciones con Alembic.
 - Migración a PostgreSQL.
