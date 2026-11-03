@@ -8,7 +8,9 @@ Python 3.13 (evitar 3.14 por un bug de compatibilidad conocido con SQLAlchemy �
 
 ## Instalación
 
-Crear y activar el entorno virtual:
+El repositorio tiene el backend en `backend/`; el frontend (React) está pendiente y va a vivir en `frontend/`. El entorno virtual `venv/` se crea en la raíz del repo; **el servidor y los tests se ejecutan siempre desde `backend/`**.
+
+Crear y activar el entorno virtual (desde la raíz del repo):
 
 ```bash
 python -m venv venv
@@ -21,26 +23,23 @@ En Windows con PowerShell, en lugar del segundo comando:
 venv\Scripts\Activate.ps1
 ```
 
-Instalar las dependencias (las versiones están fijadas en `requirements.txt`):
+Entrar al backend e instalar las dependencias (las versiones están fijadas en `requirements.txt`; `requirements-dev.txt` agrega `pytest`):
 
 ```bash
-pip install -r requirements.txt
-```
-
-Para desarrollar (incluye todo lo anterior más `pytest`):
-
-```bash
+cd backend
 pip install -r requirements-dev.txt
 ```
 
-Configurar las variables de entorno: copiar `.env.example` a `.env` y completar `SECRET_KEY` con una clave generada así:
+Para producción alcanza con `pip install -r requirements.txt`.
+
+Configurar las variables de entorno (dentro de `backend/`): copiar `.env.example` a `.env` y completar `SECRET_KEY` con una clave generada así:
 
 ```bash
 cp .env.example .env
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el servidor no arranca, a propósito. Opcionalmente, `DATABASE_URL` cambia la base (por defecto `sqlite:///./businesses.db`); una variable ya definida en el entorno tiene prioridad sobre el `.env`.
+El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el servidor no arranca, a propósito. Opcionalmente, `DATABASE_URL` cambia la base; por defecto es `backend/businesses.db`, ubicada a partir de `database.py` (no depende de la carpeta desde donde se lance el servidor). Una variable ya definida en el entorno tiene prioridad sobre el `.env`.
 
 ### Para qué se usa cada librería
 
@@ -51,10 +50,14 @@ El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el
 - **bcrypt<5.0.0**: versión fijada — `passlib` es incompatible con `bcrypt>=5.0.0`.
 - **python-jose[cryptography]**: generación y verificación de JWT.
 - **python-dotenv**: carga las variables del archivo `.env` (por ejemplo `SECRET_KEY`).
+- **pytest** (solo desarrollo): la suite de tests.
 
 ## Levantar el servidor
 
+Desde `backend/`, con el entorno virtual activado:
+
 ```bash
+cd backend
 fastapi dev main.py
 ```
 
@@ -62,61 +65,61 @@ Documentación interactiva: `http://127.0.0.1:8000/docs`
 
 ## Tests
 
-Instalar pytest con las dependencias de desarrollo:
+Desde `backend/`, con las dependencias de desarrollo instaladas:
 
 ```bash
-pip install -r requirements-dev.txt
-```
-
-Correr toda la suite desde la raíz del proyecto:
-
-```bash
+cd backend
 pytest
 ```
 
 Saltear las pruebas lentas (concurrencia con hilos reales): `pytest -m "not slow"`.
 
-Los tests no usan el `.env` ni el `businesses.db` reales: cada prueba trabaja sobre su propia copia de una base SQLite temporal y usa una `SECRET_KEY` de prueba. Todos los datos de prueba son ficticios. La suite cubre autenticación, negocios, slugs, archivado, menús, menú público, creación de pedidos, estados, cancelación automática, concurrencia y fechas (`tests/test_<tema>.py`; las fixtures compartidas están en `tests/conftest.py`).
+Los tests no usan el `.env` ni el `businesses.db` reales: cada prueba trabaja sobre su propia copia de una base SQLite temporal y usa una `SECRET_KEY` de prueba. Todos los datos de prueba son ficticios. La suite cubre autenticación, negocios, slugs, archivado, menús, menú público, creación de pedidos, estados, cancelación automática, concurrencia y fechas (`backend/tests/test_<tema>.py`; las fixtures compartidas están en `backend/tests/conftest.py`).
 
 ## Estructura del proyecto
 
 ```
 asistente-ia/
-├── main.py            # punto de entrada — crea la app y engancha los routers
-├── database.py         # conexión a SQLite, engine, sesión, get_db()
-├── security.py          # hashing de contraseñas, JWT, get_current_user
-├── .env.example          # plantilla de variables de entorno (el .env real no se sube)
-├── requirements.txt      # dependencias de la app (versiones fijadas)
-├── requirements-dev.txt  # + herramientas de desarrollo (pytest)
-├── pytest.ini            # configuración de la suite (carpeta, marcador slow)
-├── models/               # tablas reales (SQLAlchemy)
-│   ├── business_models.py
-│   ├── custom_types.py     # UTCDateTime: fechas siempre en UTC
-│   ├── menu_models.py
-│   ├── order_models.py
-│   └── user_models.py
-├── schemas/                # forma de los datos que viajan por HTTP (Pydantic)
-│   ├── business_schemas.py
-│   ├── common_schemas.py
-│   ├── menu_schemas.py
-│   ├── order_schemas.py
-│   ├── public_schemas.py
-│   └── user_schemas.py
-├── routers/                  # endpoints — solo saben de HTTP
-│   ├── business_router.py
-│   ├── menu_routers.py
-│   ├── order_routers.py     # pedidos, lado del dueño (JWT)
-│   ├── public_routers.py    # menú y pedidos, lado del cliente (sin JWT)
-│   └── user_routers.py
-├── services/                   # lógica real — nunca saben de HTTP
-│   ├── business_services.py
-│   ├── menu_services.py
-│   ├── order_services.py
-│   ├── public_services.py
-│   └── user_services.py
-├── utils/
-│   └── datetime_utils.py      # utc_now() y to_utc()
-└── tests/                       # suite de pytest (conftest.py + test_<tema>.py)
+├── README.md
+├── .gitignore
+├── venv/                      # entorno virtual (no se sube)
+├── frontend/                  # PENDIENTE: panel web en React (todavía no existe)
+└── backend/                   # todo el backend; servidor y tests se ejecutan desde acá
+    ├── main.py                # punto de entrada — crea la app y engancha los routers
+    ├── database.py            # conexión a SQLite, engine, sesión, get_db()
+    ├── security.py            # hashing de contraseñas, JWT, get_current_user
+    ├── .env.example           # plantilla de variables de entorno (el .env real no se sube)
+    ├── requirements.txt       # dependencias de la app (versiones fijadas)
+    ├── requirements-dev.txt   # + herramientas de desarrollo (pytest)
+    ├── pytest.ini             # configuración de la suite (carpeta, marcador slow)
+    ├── models/                # tablas reales (SQLAlchemy)
+    │   ├── business_models.py
+    │   ├── custom_types.py      # UTCDateTime: fechas siempre en UTC
+    │   ├── menu_models.py
+    │   ├── order_models.py
+    │   └── user_models.py
+    ├── schemas/               # forma de los datos que viajan por HTTP (Pydantic)
+    │   ├── business_schemas.py
+    │   ├── common_schemas.py
+    │   ├── menu_schemas.py
+    │   ├── order_schemas.py
+    │   ├── public_schemas.py
+    │   └── user_schemas.py
+    ├── routers/               # endpoints — solo saben de HTTP
+    │   ├── business_router.py
+    │   ├── menu_routers.py
+    │   ├── order_routers.py     # pedidos, lado del dueño (JWT)
+    │   ├── public_routers.py    # menú y pedidos, lado del cliente (sin JWT)
+    │   └── user_routers.py
+    ├── services/              # lógica real — nunca saben de HTTP
+    │   ├── business_services.py
+    │   ├── menu_services.py
+    │   ├── order_services.py
+    │   ├── public_services.py
+    │   └── user_services.py
+    ├── utils/
+    │   └── datetime_utils.py    # utc_now() y to_utc()
+    └── tests/                 # suite de pytest (conftest.py + test_<tema>.py)
 ```
 
 ## Endpoints
@@ -171,6 +174,7 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 10. **Gestión de pedidos del dueño**: listados de activos e historial paginado, detalle y una máquina de estados con transiciones validadas; cancelación automática de pedidos listos no retirados, según el plazo de cada sucursal.
 11. **Robustez y cierre**: contador atómico de números de pedido (probado con pedidos simultáneos reales), cambios de estado atómicos con `UPDATE` condicional, un tipo de columna propio para que todas las fechas queden en UTC, y archivado de negocios (borrado lógico) con slugs que nunca se reutilizan.
 12. **Suite de tests con pytest**: más de 300 pruebas versionadas, cada una con su propia base temporal (nunca la real), que cubren todo lo anterior, incluidas carreras con hilos reales. Al armarla se agregaron validaciones de largo en negocios, menús y platos, el plazo de retiro al crear, límites de dígitos en el teléfono y dependencias fijadas en `requirements.txt`.
+13. **Un solo repositorio para backend y frontend**: el backend se mudó a `backend/` (con `git mv`, conservando el historial) para preparar el frontend, y la ruta por defecto de la base pasó a armarse a partir de `database.py`, para no crear bases vacías según la carpeta desde donde se lance el servidor.
 
 ### Bugs reales resueltos en el camino
 
