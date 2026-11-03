@@ -1,0 +1,159 @@
+/* Comanda design tokens (version 1). The ONLY place with color literals in src/ (a test enforces it).
+   Light theme on :root, dark theme on [data-theme="dark"]. Variable names: --<token name>. */
+
+:root {
+  /* Color: surfaces and text */
+  --surface-page: #F5F6F7;
+  --surface: #FFFFFF;
+  --surface-sunken: #ECEEF0;
+  --ink: #12161B;
+  --ink-muted: #475467;
+  --ink-subtle: #5B6675;
+  --border: #DFE3E8;
+  --border-control: #7A8594;
+
+  /* Color: brand, focus and danger */
+  --accent: #0E6B50;
+  --accent-hover: #0A5740;
+  --on-accent: #FFFFFF;
+  --accent-soft: #E3F3EC;
+  --accent-soft-ink: #0A4B38;
+  --focus-ring: #2E5BDB;
+  --danger: #B42318;
+  --on-danger: #FFFFFF;
+  --danger-soft: #FDE8E6;
+  --danger-soft-ink: #912018;
+
+  /* Color: order statuses (only for the six statuses) */
+  --status-pending-bg: #FFF0C2;
+  --status-pending-fg: #6B4300;
+  --status-pending-dot: #B7791F;
+  --status-confirmed-bg: #DCEAFE;
+  --status-confirmed-fg: #123F91;
+  --status-confirmed-dot: #2F6FD6;
+  --status-preparing-bg: #EBE1FB;
+  --status-preparing-fg: #52279A;
+  --status-preparing-dot: #7B4FD1;
+  --status-ready-bg: #D4F1E1;
+  --status-ready-fg: #0B5232;
+  --status-ready-dot: #1E8E5A;
+  --status-delivered-bg: #E5E8EC;
+  --status-delivered-fg: #363F4A;
+  --status-delivered-dot: #6B7684;
+  --status-cancelled-bg: #FCE1DE;
+  --status-cancelled-fg: #8E1B14;
+  --status-cancelled-dot: #C9372C;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(18, 22, 27, 0.08);
+  --shadow-md: 0 6px 20px rgba(18, 22, 27, 0.14);
+
+  /* Font families. The self-hosted variable font registers itself as "Schibsted Grotesk Variable",
+     so that name goes first; the rest is the token's list unchanged. */
+  --font-sans: "Schibsted Grotesk Variable", "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  /* Type styles: size / line height / weight / letter spacing */
+  --type-display-lg-size: 40px;
+  --type-display-lg-line: 44px;
+  --type-display-lg-weight: 700;
+  --type-display-lg-tracking: -0.02em;
+  --type-display-md-size: 28px;
+  --type-display-md-line: 34px;
+  --type-display-md-weight: 700;
+  --type-display-md-tracking: -0.015em;
+  --type-heading-1-size: 22px;
+  --type-heading-1-line: 28px;
+  --type-heading-1-weight: 650;
+  --type-heading-2-size: 18px;
+  --type-heading-2-line: 26px;
+  --type-heading-2-weight: 650;
+  --type-heading-3-size: 15px;
+  --type-heading-3-line: 22px;
+  --type-heading-3-weight: 650;
+  --type-body-size: 15px;
+  --type-body-line: 22px;
+  --type-body-weight: 400;
+  --type-body-sm-size: 13px;
+  --type-body-sm-line: 18px;
+  --type-body-sm-weight: 400;
+  --type-label-size: 13px;
+  --type-label-line: 16px;
+  --type-label-weight: 600;
+  --type-caption-size: 12px;
+  --type-caption-line: 16px;
+  --type-caption-weight: 500;
+  --type-caption-tracking: 0.02em;
+  --type-order-number-size: 20px;
+  --type-order-number-line: 24px;
+  --type-order-number-weight: 600;
+  --type-price-size: 15px;
+  --type-price-line: 20px;
+  --type-price-weight: 500;
+  --type-data-sm-size: 13px;
+  --type-data-sm-line: 18px;
+  --type-data-sm-weight: 500;
+
+  /* Spacing (4px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --duration-fast: 140ms;
+}
+
+[data-theme="dark"] {
+  --surface-page: #0E1216;
+  --surface: #161B21;
+  --surface-sunken: #1D232A;
+  --ink: #EDF0F3;
+  --ink-muted: #A7B1BD;
+  --ink-subtle: #8E99A6;
+  --border: #2A323B;
+  --border-control: #7C8794;
+
+  --accent: #3DBE90;
+  --accent-hover: #5FD0A8;
+  --on-accent: #052418;
+  --accent-soft: #143228;
+  --accent-soft-ink: #8EE0C2;
+  --focus-ring: #7FA6FF;
+  --danger: #F97066;
+  --on-danger: #2A0805;
+  --danger-soft: #3B1613;
+  --danger-soft-ink: #FDA29B;
+
+  --status-pending-bg: #3A2C0B;
+  --status-pending-fg: #F6D27A;
+  --status-pending-dot: #E0A62F;
+  --status-confirmed-bg: #14284A;
+  --status-confirmed-fg: #9DC0FA;
+  --status-confirmed-dot: #5C93EB;
+  --status-preparing-bg: #2B1E48;
+  --status-preparing-fg: #CDB6F5;
+  --status-preparing-dot: #9A74E6;
+  --status-ready-bg: #10321F;
+  --status-ready-fg: #8FE0B3;
+  --status-ready-dot: #45B97C;
+  --status-delivered-bg: #262C34;
+  --status-delivered-fg: #BCC5CF;
+  --status-delivered-dot: #8893A0;
+  --status-cancelled-bg: #3D1713;
+  --status-cancelled-fg: #F9A59D;
+  --status-cancelled-dot: #E5584B;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.6);
+}

@@ -1,0 +1,179 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Tokens exposed as the Tailwind theme. The default palette, radii and shadows are cleared on
+   purpose: only design-system values can be used (bg-surface, text-ink, rounded-lg, shadow-md...).
+   "inline" makes utilities read the token variables directly (tokens.css is unlayered, so its
+   values always win, including under [data-theme="dark"]). */
+@theme inline {
+  --color-*: initial;
+  --color-surface-page: var(--surface-page);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-border: var(--border);
+  --color-border-control: var(--border-control);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-ink: var(--accent-soft-ink);
+  --color-focus-ring: var(--focus-ring);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-ink: var(--danger-soft-ink);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-pending-fg: var(--status-pending-fg);
+  --color-status-pending-dot: var(--status-pending-dot);
+  --color-status-confirmed-bg: var(--status-confirmed-bg);
+  --color-status-confirmed-fg: var(--status-confirmed-fg);
+  --color-status-confirmed-dot: var(--status-confirmed-dot);
+  --color-status-preparing-bg: var(--status-preparing-bg);
+  --color-status-preparing-fg: var(--status-preparing-fg);
+  --color-status-preparing-dot: var(--status-preparing-dot);
+  --color-status-ready-bg: var(--status-ready-bg);
+  --color-status-ready-fg: var(--status-ready-fg);
+  --color-status-ready-dot: var(--status-ready-dot);
+  --color-status-delivered-bg: var(--status-delivered-bg);
+  --color-status-delivered-fg: var(--status-delivered-fg);
+  --color-status-delivered-dot: var(--status-delivered-dot);
+  --color-status-cancelled-bg: var(--status-cancelled-bg);
+  --color-status-cancelled-fg: var(--status-cancelled-fg);
+  --color-status-cancelled-dot: var(--status-cancelled-dot);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-*: initial;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-pill: var(--radius-pill);
+
+  --shadow-*: initial;
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+
+  /* The whole numeric spacing scale derives from the 4px token: p-4 = 16px (space-4),
+     p-6 = 24px (space-5), p-8 = 32px (space-6), p-12 = 48px (space-7), p-16 = 64px (space-8). */
+  --spacing: var(--space-1);
+}
+
+/* Type styles from the tokens (Anexo A, type.groups) */
+@utility text-display-lg {
+  font-family: var(--font-sans);
+  font-size: var(--type-display-lg-size);
+  line-height: var(--type-display-lg-line);
+  font-weight: var(--type-display-lg-weight);
+  letter-spacing: var(--type-display-lg-tracking);
+}
+@utility text-display-md {
+  font-family: var(--font-sans);
+  font-size: var(--type-display-md-size);
+  line-height: var(--type-display-md-line);
+  font-weight: var(--type-display-md-weight);
+  letter-spacing: var(--type-display-md-tracking);
+}
+@utility text-heading-1 {
+  font-size: var(--type-heading-1-size);
+  line-height: var(--type-heading-1-line);
+  font-weight: var(--type-heading-1-weight);
+}
+@utility text-heading-2 {
+  font-size: var(--type-heading-2-size);
+  line-height: var(--type-heading-2-line);
+  font-weight: var(--type-heading-2-weight);
+}
+@utility text-heading-3 {
+  font-size: var(--type-heading-3-size);
+  line-height: var(--type-heading-3-line);
+  font-weight: var(--type-heading-3-weight);
+}
+@utility text-body {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+}
+@utility text-body-sm {
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+  font-weight: var(--type-body-sm-weight);
+}
+@utility text-label {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+}
+@utility text-caption {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
+  letter-spacing: var(--type-caption-tracking);
+}
+@utility text-order-number {
+  font-family: var(--font-mono);
+  font-size: var(--type-order-number-size);
+  line-height: var(--type-order-number-line);
+  font-weight: var(--type-order-number-weight);
+  font-variant-numeric: tabular-nums;
+}
+/* Final order number on the public page: order-number (mono, tabular) at display-lg size */
+@utility text-order-number-hero {
+  font-family: var(--font-mono);
+  font-size: var(--type-display-lg-size);
+  line-height: var(--type-display-lg-line);
+  font-weight: var(--type-order-number-weight);
+  font-variant-numeric: tabular-nums;
+}
+@utility text-price {
+  font-family: var(--font-mono);
+  font-size: var(--type-price-size);
+  line-height: var(--type-price-line);
+  font-weight: var(--type-price-weight);
+  font-variant-numeric: tabular-nums;
+}
+@utility text-data-sm {
+  font-family: var(--font-mono);
+  font-size: var(--type-data-sm-size);
+  line-height: var(--type-data-sm-line);
+  font-weight: var(--type-data-sm-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus: 2px solid focus-ring with 2px offset, on every interactive element */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* The only CSS transition of the system: 140ms ease-out on color and background */
+@utility transition-tint {
+  transition-property: color, background-color, border-color;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: ease-out;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+@layer base {
+  html {
+    background-color: var(--surface-page);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    min-height: 100dvh;
+  }
+  #root {
+    min-height: 100dvh;
+  }
+}
