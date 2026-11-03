@@ -2,6 +2,7 @@ import { Navigate, Outlet, type RouteObject } from "react-router";
 import { AppShell } from "./AppShell";
 import { GuestOnly, HOME_PATH, Logout, RequireAuth } from "./guards";
 import { NotFoundPage } from "./NotFoundPage";
+import { PublicLayout } from "./PublicLayout";
 import { RouteLoading } from "./RouteLoading";
 
 // Each screen is downloaded only when it is visited (code splitting): a customer opening the
@@ -29,6 +30,17 @@ export const routes: RouteObject[] = [
       { path: "/negocios/:id", lazy: page(() => import("../features/businesses/BusinessDetailPage").then((m) => ({ default: m.BusinessDetailPage }))) },
       { path: "/menus", lazy: page(() => import("../features/menus/MenusPage").then((m) => ({ default: m.MenusPage }))) },
       { path: "/menus/:id", lazy: page(() => import("../features/menus/MenuEditorPage").then((m) => ({ default: m.MenuEditorPage }))) },
+    ],
+  },
+  {
+    // Customer pages: no account, no token, no AppShell
+    path: "/pedir/:slug",
+    hydrateFallbackElement: <RouteLoading />,
+    element: <PublicLayout />,
+    children: [
+      { index: true, lazy: page(() => import("../features/public/PublicMenuPage").then((m) => ({ default: m.PublicMenuPage }))) },
+      { path: "resumen", lazy: page(() => import("../features/public/PublicSummaryPage").then((m) => ({ default: m.PublicSummaryPage }))) },
+      { path: "listo", lazy: page(() => import("../features/public/PublicDonePage").then((m) => ({ default: m.PublicDonePage }))) },
     ],
   },
   { path: "/salir", element: <Logout /> },

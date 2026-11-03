@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { registerSchema } from "../src/features/auth/schemas";
-import { charCount, passwordProblems, utf8ByteLength } from "../src/lib/validation";
+import { orderFormSchema } from "../src/features/public/orderForm";
+import { charCount, passwordProblems, phoneProblem, utf8ByteLength } from "../src/lib/validation";
 
 describe("password rules (register only), counted in BYTES", () => {
   it("knows that accents and ñ take 2 bytes", () => {
@@ -36,5 +37,38 @@ describe("password rules (register only), counted in BYTES", () => {
     expect(registerSchema.safeParse({ ...base, name: "x".repeat(101) }).success).toBe(false);
     const parsed = registerSchema.parse({ ...base, name: "  Ana  " });
     expect(parsed.name).toBe("Ana");
+  });
+});
+
+describe("phone (same rules as the backend)", () => {
+  it.each(["123456", "123456789012345", "+54 9 351 123-4567", "351 - 1234567", "+549351123456789"])("accepts %j", (phone) => {
+    expect(phoneProblem(phone)).toBeNull();
+  });
+
+  it.each([
+    "",
+    "12345",              // 5 digits
+    "1234567890123456",   // 16 digits
+    "11  0000-0000",      // double space
+    "11 0000--0000",      // double hyphen
+    "11+00000000",        // + in the middle
+    "------",             // no digits
+    "abc123456",          // letters
+  ])("rejects %j", (phone) => {
+    expect(phoneProblem(phone)).not.toBeNull();
+  });
+});
+
+describe("order form limits", () => {
+  const valid = { customer_name: "Cliente", customer_phone: "351 555-0142", notes: "" };
+
+  it("accepts the edges: name of 2 and notes of 300", () => {
+    expect(orderFormSchema.safeParse({ ...valid, customer_name: "Al", notes: "x".repeat(300) }).success).toBe(true);
+  });
+
+  it("rejects a 1-letter name, notes of 301 and a short phone", () => {
+    expect(orderFormSchema.safeParse({ ...valid, customer_name: "A" }).success).toBe(false);
+    expect(orderFormSchema.safeParse({ ...valid, notes: "x".repeat(301) }).success).toBe(false);
+    expect(orderFormSchema.safeParse({ ...valid, customer_phone: "12345" }).success).toBe(false);
   });
 });
