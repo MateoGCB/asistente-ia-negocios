@@ -1,5 +1,6 @@
 # schemas/user_schemas.py
-from pydantic import BaseModel, EmailStr, field_validator
+from typing import Annotated
+from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
 
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_BYTES = 72  # bcrypt only uses the first 72 BYTES: longer passwords would be silently cut
@@ -16,7 +17,8 @@ def lowercase_email(email: str) -> str:
 
 
 class UserCreate(BaseModel):
-    name: str
+    # Strip only THIS field: a model-wide str_strip_whitespace would also cut spaces from the password
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
     email: EmailStr
     password: str
 

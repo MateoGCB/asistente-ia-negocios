@@ -126,3 +126,31 @@ def test_login_never_applies_password_rules(client, password):
     assert response.status_code == 401
     assert response.json() == login(client, "nadie@example.com").json()  # same generic body
 
+
+# ---------------------------------------------------------------- name (register)
+
+@pytest.mark.parametrize(
+    "sent, saved",
+    [("Ana", "Ana"), ("  Ana María  ", "Ana María"), ("x", "x"), ("x" * 100, "x" * 100)],
+    ids=["valid", "spaces_around", "1_char", "100_chars"],
+)
+def test_valid_name_is_saved_without_surrounding_spaces(client, db_session, sent, saved):
+    response = register(client, "persona@example.com", name=sent)
+
+    assert response.status_code == 201
+    assert response.json()["name"] == saved
+    assert db_session.query(User_db).one().name == saved
+
+
+@pytest.mark.parametrize("name", ["", "    ", "x" * 101], ids=["empty", "only_spaces", "101_chars"])
+def test_invalid_name_returns_422_and_saves_nothing(client, db_session, name):
+    assert register(client, "persona@example.com", name=name).status_code == 422
+    assert db_session.query(User_db).count() == 0
+
+
+def test_password_spaces_are_kept(client):
+    # Only the name is stripped: spaces in a password are part of it
+    register(client, "persona@example.com", password="  clave 123  ")
+
+    assert login(client, "persona@example.com", password="  clave 123  ").status_code == 200
+    assert login(client, "persona@example.com", password="clave 123").status_code == 401
