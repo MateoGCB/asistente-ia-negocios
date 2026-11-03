@@ -39,3 +39,9 @@ class MenuCreate(BaseModel):
 class Menu(BaseModel):
     id : int
     name : str
+
+class MenuSummary(BaseModel):
+    # Allow-list for GET /menus/: never owner_id
+    id : int
+    name : str
+    items_count : int
