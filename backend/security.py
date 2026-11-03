@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException
 from jose import JWTError
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from models.user_models import User_db
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from database import get_db
 
@@ -26,6 +27,13 @@ def create_access_token(data: dict):
 bearer_scheme = HTTPBearer()
 
 
+def find_user_by_email(email: str, db: Session) -> User_db | None:
+    # Case-insensitive on BOTH sides: new users are stored in lowercase, but older rows may
+    # still have capitals; this way they keep working without migrating the data.
+    # The single place where users are looked up by email (register, login, token).
+    return db.query(User_db).filter(func.lower(User_db.email) == email.lower()).first()
+
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db)):
     token = credentials.credentials
     try:
@@ -33,8 +41,11 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_
         email = payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
-    
-    user = db.query(User_db).filter(User_db.email == email).first()
+    if not isinstance(email, str):
+        # A token without a text "sub" can never belong to a user
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+    user = find_user_by_email(email, db)
     if user is None:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
     return user
