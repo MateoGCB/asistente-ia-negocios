@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey
 from database import Base
 from sqlalchemy.orm import relationship
 from sqlalchemy import Enum
@@ -30,4 +30,6 @@ class MenuItem_db(Base):
     description = Column(String)
     price = Column(Numeric(10, 2))
     category = Column(Enum(MenuCategory))
+    available = Column(Boolean, nullable=False, default=True)
     menu = relationship("Menu_db", back_populates="items")
+    order_items = relationship("OrderItem_db", back_populates="menu_item")

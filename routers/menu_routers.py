@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from security import get_current_user
 from schemas.menu_schemas import MenuItemCreate, MenuItemUpdate, MenuItem, MenuCreate, Menu
+from schemas.common_schemas import Message
 from models.user_models import User_db
 from services.menu_services import (
     create_menu,
@@ -10,6 +11,7 @@ from services.menu_services import (
     list_menu_items,
     update_menu_item,
     delete_menu_item,
+    DeleteItemResult,
     )
 
 router = APIRouter(prefix="/menus")
@@ -39,9 +41,14 @@ def item_update(menu_id: int, item_id: int, item_update: MenuItemUpdate, db: Ses
         raise HTTPException(status_code=404, detail="Item not found")
     return item_obj
 
-@router.delete("/{menu_id}/items/{item_id}")
+@router.delete("/{menu_id}/items/{item_id}", response_model=Message)
 def item_delete(menu_id: int, item_id: int, db: Session = Depends(get_db), current_user: User_db = Depends(get_current_user)):
-    deleted = delete_menu_item(item_id, menu_id, db, current_user)
-    if not deleted:
+    result = delete_menu_item(item_id, menu_id, db, current_user)
+    if result == DeleteItemResult.not_found:
         raise HTTPException(status_code=404, detail="Item not found")
+    if result == DeleteItemResult.in_use:
+        raise HTTPException(
+            status_code=409,
+            detail="This item appears in existing orders and cannot be deleted. Mark it as unavailable (available=false) instead.",
+        )
     return {"message": "Item deleted successfully"}

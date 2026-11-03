@@ -4,9 +4,10 @@ from services.business_services import (
     search_by_id,
     list_all_businesses,
     update_bus,
-    delete_business_by_id,
+    archive_business_by_id,
     )
 from schemas.business_schemas import CreateBusiness, Business, BusinessUpdate
+from schemas.common_schemas import Message
 from sqlalchemy.orm import Session
 from database import get_db
 from security import get_current_user
@@ -17,6 +18,8 @@ router = APIRouter()
 @router.post("/businesses/", response_model=Business, status_code=201)
 def create_business(business: CreateBusiness,db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):
     business_obj = create_business_id(business,db,current_user)
+    if business_obj is None:
+        raise HTTPException(status_code=409, detail="Could not generate a unique slug for this business, please try again")
     return business_obj
 
 @router.get("/businesses/", response_model=list[Business])
@@ -30,12 +33,13 @@ def get_business(business_id: int, db: Session= Depends(get_db),current_user: Us
         raise HTTPException(status_code=404, detail="Business not found")
     return search
 
-@router.delete("/businesses/{business_id}")
+@router.delete("/businesses/{business_id}", response_model=Message)
 def delete_business(business_id: int, db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):
-    deleted = delete_business_by_id(business_id, db, current_user)
-    if not deleted:
+    # Soft delete: the business is archived (its orders and its slug are kept), not removed
+    archived = archive_business_by_id(business_id, db, current_user)
+    if not archived:
         raise HTTPException(status_code=404, detail="Business not found")
-    return {"message": "Business deleted successfully"}
+    return {"message": "Business archived successfully"}
 
 @router.patch("/businesses/{business_id}", response_model=Business)
 def update_business(business_id : int, business_update : BusinessUpdate, db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):

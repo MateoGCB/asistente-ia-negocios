@@ -1,7 +1,14 @@
+import enum
 from sqlalchemy.orm import Session
 from models.menu_models import MenuItem_db, Menu_db
+from models.order_models import OrderItem_db
 from schemas.menu_schemas import MenuItemCreate, MenuItemUpdate, MenuCreate
 from models.user_models import User_db
+
+class DeleteItemResult(str, enum.Enum):
+    deleted = "deleted"
+    not_found = "not_found"
+    in_use = "in_use"
 
 def create_menu(menu: MenuCreate, db: Session, user_auth: User_db):
     menu_obj = Menu_db(name=menu.name, owner_id=user_auth.id)
@@ -49,10 +56,15 @@ def update_menu_item(item_id: int, id_menu: int, item_update: MenuItemUpdate, db
     db.refresh(stored_item)
     return stored_item
 
-def delete_menu_item(item_id: int, id_menu: int, db: Session, user: User_db):
+def delete_menu_item(item_id: int, id_menu: int, db: Session, user: User_db) -> DeleteItemResult:
+    # Ownership is checked FIRST: another user gets "not found", never learns about our orders
     stored_item = search_item_by_id(item_id, id_menu, db, user)
     if stored_item is None:
-        return False
+        return DeleteItemResult.not_found
+    # An item that appears in past orders is kept; the owner should set available=False instead
+    used_in_orders = db.query(OrderItem_db).filter(OrderItem_db.menu_item_id == item_id).first() is not None
+    if used_in_orders:
+        return DeleteItemResult.in_use
     db.delete(stored_item)
     db.commit()
-    return True
+    return DeleteItemResult.deleted

@@ -13,6 +13,7 @@ class MenuItemUpdate(BaseModel):
     description : str | None = None
     price : Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
     category : MenuCategory | None = None
+    available : bool | None = None
 
 class MenuItem(BaseModel):
     id : int
@@ -20,6 +21,7 @@ class MenuItem(BaseModel):
     description : str
     price : Decimal
     category : MenuCategory
+    available : bool
 
 class MenuCreate(BaseModel):
     name : str
