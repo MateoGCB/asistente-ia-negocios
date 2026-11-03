@@ -167,6 +167,6 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 - Tests automáticos con `pytest` y migraciones con Alembic.
 - Migración a PostgreSQL.
 - Tabla de preguntas frecuentes ligada a `Business`.
-- Integración real con la API de Claude — el corazón del proyecto: system prompt + contexto del negocio (datos, catálogo, FAQ) + historial de conversación.
+- Integración con un asistente de IA (en pausa).
 - Frontend web (React) para el panel de administración de los dueños de negocio.
 - Conexión con WhatsApp como interfaz del cliente final.

@@ -2,7 +2,4 @@ venv/
 __pycache__/
 *.db
 .env
-CLAUDE.md
-.claude/
-TAREA.md
 .vscode/
