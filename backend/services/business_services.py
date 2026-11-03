@@ -81,6 +81,19 @@ def update_bus (business_id : int, business_update : BusinessUpdate, db:Session,
     return stored_business_data
 
 
+def unassign_menu(business_id: int, db: Session, user: User_db) -> bool:
+    # Conditional UPDATE built on the central active-business filter: foreign, unknown or archived
+    # business -> 0 rows -> False (404). A business that already had no menu still matches the WHERE,
+    # so it counts as 1 row: the operation is idempotent. The menu itself is NOT deleted.
+    updated_rows = (
+        query_active_businesses(db)
+        .filter(Business_db.id == business_id, Business_db.owner_id == user.id)
+        .update({Business_db.menu_id: None}, synchronize_session=False)
+    )
+    db.commit()
+    return updated_rows == 1
+
+
 def archive_business_by_id(business_id: int, db:Session, user:User_db):
     # Soft delete with a conditional UPDATE: WHERE id = ? AND owner_id = ? AND deleted_at IS NULL.
     # Already archived, not yours or non-existent -> 0 rows -> False (404). Two simultaneous archives: one wins.

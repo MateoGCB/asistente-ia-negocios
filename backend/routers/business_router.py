@@ -5,6 +5,7 @@ from services.business_services import (
     list_all_businesses,
     update_bus,
     archive_business_by_id,
+    unassign_menu,
     )
 from schemas.business_schemas import CreateBusiness, Business, BusinessUpdate
 from schemas.common_schemas import Message
@@ -40,6 +41,13 @@ def delete_business(business_id: int, db: Session= Depends(get_db),current_user:
     if not archived:
         raise HTTPException(status_code=404, detail="Business not found")
     return {"message": "Business archived successfully"}
+
+@router.delete("/businesses/{business_id}/menu", response_model=Message)
+def remove_business_menu(business_id: int, db: Session = Depends(get_db), current_user: User_db = Depends(get_current_user)):
+    # Only detaches the menu (menu_id = NULL); the menu and its items are kept. Idempotent.
+    if not unassign_menu(business_id, db, current_user):
+        raise HTTPException(status_code=404, detail="Business not found")
+    return {"message": "Menu removed from business"}
 
 @router.patch("/businesses/{business_id}", response_model=Business)
 def update_business(business_id : int, business_update : BusinessUpdate, db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):
