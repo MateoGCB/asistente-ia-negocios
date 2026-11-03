@@ -21,15 +21,16 @@ En Windows con PowerShell, en lugar del segundo comando:
 venv\Scripts\Activate.ps1
 ```
 
-Instalar todas las dependencias:
+Instalar las dependencias (las versiones están fijadas en `requirements.txt`):
 
 ```bash
-pip install "fastapi[standard]"
-pip install sqlalchemy
-pip install "passlib[bcrypt]"
-pip install "bcrypt<5.0.0"
-pip install "python-jose[cryptography]"
-pip install python-dotenv
+pip install -r requirements.txt
+```
+
+Para desarrollar (incluye todo lo anterior más `pytest`):
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 Configurar las variables de entorno: copiar `.env.example` a `.env` y completar `SECRET_KEY` con una clave generada así:
@@ -39,7 +40,7 @@ cp .env.example .env
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el servidor no arranca, a propósito.
+El `.env` está en `.gitignore` y **nunca** se sube al repo. Sin `SECRET_KEY` el servidor no arranca, a propósito. Opcionalmente, `DATABASE_URL` cambia la base (por defecto `sqlite:///./businesses.db`); una variable ya definida en el entorno tiene prioridad sobre el `.env`.
 
 ### Para qué se usa cada librería
 
@@ -59,6 +60,24 @@ fastapi dev main.py
 
 Documentación interactiva: `http://127.0.0.1:8000/docs`
 
+## Tests
+
+Instalar pytest con las dependencias de desarrollo:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Correr toda la suite desde la raíz del proyecto:
+
+```bash
+pytest
+```
+
+Saltear las pruebas lentas (concurrencia con hilos reales): `pytest -m "not slow"`.
+
+Los tests no usan el `.env` ni el `businesses.db` reales: cada prueba trabaja sobre su propia copia de una base SQLite temporal y usa una `SECRET_KEY` de prueba. Todos los datos de prueba son ficticios. La suite cubre autenticación, negocios, slugs, archivado, menús, menú público, creación de pedidos, estados, cancelación automática, concurrencia y fechas (`tests/test_<tema>.py`; las fixtures compartidas están en `tests/conftest.py`).
+
 ## Estructura del proyecto
 
 ```
@@ -67,6 +86,9 @@ asistente-ia/
 ├── database.py         # conexión a SQLite, engine, sesión, get_db()
 ├── security.py          # hashing de contraseñas, JWT, get_current_user
 ├── .env.example          # plantilla de variables de entorno (el .env real no se sube)
+├── requirements.txt      # dependencias de la app (versiones fijadas)
+├── requirements-dev.txt  # + herramientas de desarrollo (pytest)
+├── pytest.ini            # configuración de la suite (carpeta, marcador slow)
 ├── models/               # tablas reales (SQLAlchemy)
 │   ├── business_models.py
 │   ├── custom_types.py     # UTCDateTime: fechas siempre en UTC
@@ -92,8 +114,9 @@ asistente-ia/
 │   ├── order_services.py
 │   ├── public_services.py
 │   └── user_services.py
-└── utils/
-    └── datetime_utils.py      # utc_now() y to_utc()
+├── utils/
+│   └── datetime_utils.py      # utc_now() y to_utc()
+└── tests/                       # suite de pytest (conftest.py + test_<tema>.py)
 ```
 
 ## Endpoints
@@ -106,8 +129,8 @@ Documentación interactiva completa en `/docs`. Resumen:
 
 **Del dueño (requieren JWT; un recurso ajeno responde 404, como si no existiera)**
 
-- Negocios (cada negocio es una sucursal): `POST /businesses/`, `GET /businesses/`, `GET|PATCH|DELETE /businesses/{business_id}`. Cada sucursal tiene un `slug` público, generado automáticamente y no editable, y un plazo de retiro configurable (`pickup_timeout_hours`, de 1 a 72 horas, por defecto 24).
-- Menús y platos: `POST /menus/`, `POST|GET /menus/{menu_id}/items`, `PATCH|DELETE /menus/{menu_id}/items/{item_id}`. Un plato se puede marcar como agotado (`available: false`); un plato que ya figura en pedidos no se puede borrar.
+- Negocios (cada negocio es una sucursal): `POST /businesses/`, `GET /businesses/`, `GET|PATCH|DELETE /businesses/{business_id}`. Cada sucursal tiene un `slug` público, generado automáticamente y no editable, y un plazo de retiro configurable al crearla o editarla (`pickup_timeout_hours`, de 1 a 72 horas, por defecto 24). `name` va de 1 a 100 caracteres e `industry` de 1 a 60.
+- Menús y platos: `POST /menus/`, `POST|GET /menus/{menu_id}/items`, `PATCH|DELETE /menus/{menu_id}/items/{item_id}`. El nombre del menú y el del plato van de 1 a 100 caracteres y la descripción del plato de 1 a 500. Un plato se puede marcar como agotado (`available: false`); un plato que ya figura en pedidos no se puede borrar.
 - Pedidos de una sucursal:
   - `GET /businesses/{business_id}/orders?view=active` (por defecto): pedidos en curso, del más viejo al más nuevo.
   - `GET /businesses/{business_id}/orders?view=history`: entregados y cancelados, del más nuevo al más viejo, paginado (`page`, `page_size` hasta 50).
@@ -118,7 +141,7 @@ Documentación interactiva completa en `/docs`. Resumen:
 **Públicos (sin JWT, para el cliente final)**
 
 - `GET /public/{slug}/menu`: el menú de la sucursal, solo con los platos disponibles.
-- `POST /public/{slug}/orders`: crea un pedido. El total lo calcula siempre el servidor con los precios actuales; cada pedido guarda una copia del nombre y el precio de cada plato.
+- `POST /public/{slug}/orders`: crea un pedido. El total lo calcula siempre el servidor con los precios actuales; cada pedido guarda una copia del nombre y el precio de cada plato. El teléfono lleva entre 6 y 15 dígitos (puede tener `+` al comienzo, espacios y guiones, pero no dos espacios ni dos guiones seguidos).
 
 ## Reglas de negocio destacadas
 
@@ -127,6 +150,8 @@ Documentación interactiva completa en `/docs`. Resumen:
 - **Cancelación automática por no retiro**: un pedido listo que no se retira dentro del plazo de la sucursal pasa a cancelado (`not_picked_up`). Se evalúa al consultar, sin tareas programadas.
 - **Archivado de negocios (borrado lógico)**: `DELETE /businesses/{id}` no elimina la fila, la archiva. Un negocio archivado se comporta como inexistente en toda la API (incluido su menú público), pero sus pedidos se conservan y su slug nunca se reutiliza.
 - **Fechas**: todas se guardan y se devuelven en UTC.
+- **Textos**: se recortan los espacios de los bordes antes de validar el largo, así que un campo obligatorio vacío o de solo espacios da 422.
+- **Regla de `null`**: en un campo opcional con valor por defecto, `null` significa "no lo mandé": al crear se usa el valor por defecto (por ejemplo, `pickup_timeout_hours: null` da 24) y en un `PATCH` se ignora. Un campo obligatorio con `null` da 422.
 
 ## Aislamiento entre usuarios
 
@@ -145,6 +170,7 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 9. **Menú público y pedidos del cliente final**: cada sucursal tiene un `slug` público; el cliente ve el menú sin registrarse y hace pedidos que validan platos, disponibilidad, cantidades y datos de contacto. El pedido se crea completo o no se crea (una sola transacción), con un número visible por sucursal.
 10. **Gestión de pedidos del dueño**: listados de activos e historial paginado, detalle y una máquina de estados con transiciones validadas; cancelación automática de pedidos listos no retirados, según el plazo de cada sucursal.
 11. **Robustez y cierre**: contador atómico de números de pedido (probado con pedidos simultáneos reales), cambios de estado atómicos con `UPDATE` condicional, un tipo de columna propio para que todas las fechas queden en UTC, y archivado de negocios (borrado lógico) con slugs que nunca se reutilizan.
+12. **Suite de tests con pytest**: más de 300 pruebas versionadas, cada una con su propia base temporal (nunca la real), que cubren todo lo anterior, incluidas carreras con hilos reales. Al armarla se agregaron validaciones de largo en negocios, menús y platos, el plazo de retiro al crear, límites de dígitos en el teléfono y dependencias fijadas en `requirements.txt`.
 
 ### Bugs reales resueltos en el camino
 
@@ -164,7 +190,7 @@ Para probar, registrá usuarios propios con `POST /auth/register` desde `/docs`.
 - Completar el CRUD de menús: listar y borrar menús (decidiendo qué pasa con sus ítems y con los negocios que lo usan) y poder quitarle el menú a un negocio.
 - Validación de emails y contraseñas al registrarse.
 - Hacer cumplir las foreign keys en SQLite (`PRAGMA foreign_keys`).
-- Tests automáticos con `pytest` y migraciones con Alembic.
+- Migraciones con Alembic.
 - Migración a PostgreSQL.
 - Tabla de preguntas frecuentes ligada a `Business`.
 - Integración con un asistente de IA (en pausa).

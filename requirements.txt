@@ -1,0 +1,8 @@
+# Direct dependencies of the app (versions installed and tested today)
+fastapi[standard]==0.141.1
+sqlalchemy==2.0.52
+passlib[bcrypt]==1.7.4
+# passlib breaks with bcrypt>=5.0.0 (misleading "72 bytes" error); 4.0.1 is the installed version
+bcrypt<5.0.0
+python-jose[cryptography]==3.5.0
+python-dotenv==1.2.3

@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from jose import jwt
@@ -11,7 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 
 
-load_dotenv()
+# The .env is loaded by database.py (imported above, so it always runs before this line)
 # Fails on startup (KeyError) if SECRET_KEY is missing, instead of running with an insecure default
 SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM = "HS256"

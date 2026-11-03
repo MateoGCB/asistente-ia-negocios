@@ -38,6 +38,7 @@ def create_business_id(business:CreateBusiness, db:Session, user_auth:User_db):
             name=business.name,
             industry=business.industry,
             slug=generate_unique_slug(business.name, db),
+            pickup_timeout_hours=business.pickup_timeout_hours,
             owner_id=user_auth.id,
         )
         db.add(business_obj)

@@ -7,6 +7,9 @@ from utils.datetime_utils import to_utc
 
 # ----- Input (public, anonymous customer)
 
+PHONE_MIN_DIGITS = 6
+PHONE_MAX_DIGITS = 15
+
 class OrderItemCreate(BaseModel):
     menu_item_id : int
     quantity : int = Field(ge=1, le=50)
@@ -23,9 +26,18 @@ class OrderCreate(BaseModel):
     @field_validator("customer_phone")
     @classmethod
     def require_real_digits(cls, phone: str) -> str:
-        # The pattern allows "------"; a phone also needs at least 6 actual digits
-        if sum(char.isdigit() for char in phone) < 6:
-            raise ValueError("Phone must contain at least 6 digits")
+        # The pattern allows "------"; a phone also needs at least 6 actual digits,
+        # and at most 15 (the international maximum, E.164)
+        digits = sum(char.isdigit() for char in phone)
+        if digits < PHONE_MIN_DIGITS:
+            raise ValueError(f"Phone must contain at least {PHONE_MIN_DIGITS} digits")
+        if digits > PHONE_MAX_DIGITS:
+            raise ValueError(f"Phone must contain at most {PHONE_MAX_DIGITS} digits")
+        # Separators may not be repeated ("  " or "--"); a mixed " - " like "351 - 1234567" is allowed.
+        # Accepted limitation: two short numbers in the same field ("110000 110001") cannot be told
+        # apart from ONE number written with spaces, so they pass as long as they total 6-15 digits.
+        if "  " in phone or "--" in phone:
+            raise ValueError("Phone cannot contain two consecutive spaces or hyphens")
         return phone
 
     @field_validator("notes")

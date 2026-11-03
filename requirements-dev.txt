@@ -1,0 +1,3 @@
+# Everything the app needs, plus the tools used only while developing
+-r requirements.txt
+pytest==9.2.0
