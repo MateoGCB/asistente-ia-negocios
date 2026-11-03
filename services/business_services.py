@@ -2,6 +2,7 @@
 from schemas.business_schemas import CreateBusiness, Business, BusinessUpdate
 from models.business_models import Business_db
 from models.user_models import User_db
+from services.menu_services import search_menu_by_id
 from sqlalchemy.orm import Session
 
 
@@ -24,7 +25,10 @@ def update_bus (business_id : int, business_update : BusinessUpdate, db:Session,
     stored_business_data = search_by_id(business_id, db, user)
     if stored_business_data is None:
         return None
-    update_data = business_update.model_dump(exclude_unset=True)
+    update_data = business_update.model_dump(exclude_unset=True, exclude_none=True)
+    # A menu can only be assigned if it belongs to the same user
+    if "menu_id" in update_data and search_menu_by_id(update_data["menu_id"], db, user) is None:
+        return None
     for campo, valor in update_data.items():
         setattr(stored_business_data, campo, valor)
     db.commit()

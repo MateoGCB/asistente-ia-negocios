@@ -6,7 +6,7 @@ from services.business_services import (
     update_bus,
     delete_business_by_id,
     )
-from schemas.business_schemas import CreateBusiness, BusinessUpdate
+from schemas.business_schemas import CreateBusiness, Business, BusinessUpdate
 from sqlalchemy.orm import Session
 from database import get_db
 from security import get_current_user
@@ -14,16 +14,16 @@ from models.user_models import User_db
 
 router = APIRouter()
 
-@router.post("/businesses/")
+@router.post("/businesses/", response_model=Business, status_code=201)
 def create_business(business: CreateBusiness,db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):
     business_obj = create_business_id(business,db,current_user)
     return business_obj
 
-@router.get("/businesses/")
+@router.get("/businesses/", response_model=list[Business])
 def get_businesses(db: Session = Depends(get_db), current_user: User_db = Depends(get_current_user)):
     return list_all_businesses(db,current_user)
 
-@router.get("/businesses/{business_id}")
+@router.get("/businesses/{business_id}", response_model=Business)
 def get_business(business_id: int, db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):
     search = search_by_id(business_id, db, current_user)
     if search is None:
@@ -37,10 +37,10 @@ def delete_business(business_id: int, db: Session= Depends(get_db),current_user:
         raise HTTPException(status_code=404, detail="Business not found")
     return {"message": "Business deleted successfully"}
 
-@router.patch("/businesses/{business_id}")
+@router.patch("/businesses/{business_id}", response_model=Business)
 def update_business(business_id : int, business_update : BusinessUpdate, db: Session= Depends(get_db),current_user: User_db = Depends(get_current_user)):
     update_model = update_bus(business_id, business_update, db, current_user)
     if update_model is None:
-        raise HTTPException(status_code=404, detail="Business not found")
+        raise HTTPException(status_code=404, detail="Business or menu not found")
     return update_model
 

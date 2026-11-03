@@ -1,4 +1,4 @@
-# routers/user_router.py
+# routers/user_routers.py
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database import get_db
@@ -10,7 +10,7 @@ from services.user_services import (
     )
 router = APIRouter()
 
-@router.post("/auth/register", response_model=User)
+@router.post("/auth/register", response_model=User, status_code=201)
 def user_create(user:UserCreate, db:Session=Depends(get_db)):
     user_new= create_user(user,db)
     if user_new is None:

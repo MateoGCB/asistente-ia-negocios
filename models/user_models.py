@@ -11,3 +11,4 @@ class User_db(Base):
     email = Column(String, unique=True)
     hashed_password = Column(String)
     businesses = relationship("Business_db", back_populates="owner")
+    menus = relationship("Menu_db", back_populates="owner")

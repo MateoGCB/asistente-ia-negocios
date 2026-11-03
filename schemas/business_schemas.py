@@ -8,7 +8,9 @@ class Business(BaseModel):
     id : int
     name : str
     industry : str
+    menu_id : int | None = None
 
 class BusinessUpdate(BaseModel):
     name : str | None = None
     industry : str | None = None
+    menu_id : int | None = None
